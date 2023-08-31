@@ -21,7 +21,7 @@ namespace IPAlloc.Functions
         }
 
         [Function(nameof(Allocate))]
-        public async Task<HttpResponseData> RunAsync([HttpTrigger(AuthorizationLevel.Function, "post")] HttpRequestData request)
+        public async Task<HttpResponseData> RunAsync([HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequestData request)
         {
             try
             {
