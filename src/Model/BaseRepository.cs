@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -26,6 +27,7 @@ namespace IPAlloc.Model
             var table = tableClient.GetTableReference(TableName);
 
             table.CreateIfNotExistsAsync().Wait();
+
             return table;
         });    
 
@@ -43,10 +45,78 @@ namespace IPAlloc.Model
             return (T)result.Result;
         }
 
+        public virtual async Task DeletePartitionAsync(string partitionKey)
+        {
+            var entities = await GetPartitionAsync(partitionKey).ToArrayAsync();
+            await DeleteAsync(entities);
+        }
+
         public virtual async Task DeleteAsync(T entity)
         {
             var operation = TableOperation.Delete(entity);
             await Table.ExecuteAsync(operation);
+        }
+
+        public virtual async Task DeleteAsync(params string[] conditions)
+        {
+            var entities = await QueryAsync(conditions).ToArrayAsync();
+            await DeleteAsync(entities);
+        }
+
+        public virtual async Task DeleteAsync(IEnumerable<T> entities)
+        {
+            if (entities?.Any() ?? false)
+            {
+                var partitions = entities
+                    .GroupBy(e => e.TableEntity.PartitionKey);
+
+                if (partitions.Count() > 1)
+                {
+                    partitions
+                        .Select(p => DeleteAsync(p))
+                        .WaitAll();
+                }
+                else
+                {
+                    if (entities.Count() > 100)
+                    {
+                        entities
+                            .Chunk(100)
+                            .Select(chunk => DeleteAsync(chunk))
+                            .WaitAll();
+                    }
+                    else
+                    {
+                        var tableBatchOperation = new TableBatchOperation();
+
+                        foreach (var entity in entities)
+                            tableBatchOperation.Delete(entity);
+
+                        await Table.ExecuteBatchAsync(tableBatchOperation);
+                    }
+                }
+            }
+        }
+
+        public virtual async IAsyncEnumerable<T> QueryAsync(params string[] conditions)
+        {
+            var filter = (conditions ?? Array.Empty<string>())
+                .Where(c => !string.IsNullOrEmpty(c))
+                .Aggregate((c1, c2) => TableQuery.CombineFilters(c1, TableOperators.And, c2));
+
+            var query = new TableQuery<T>().Where(filter);
+            var token = default(TableContinuationToken);
+
+            do
+            {
+                var segment = await Table.ExecuteQuerySegmentedAsync(query, token);
+
+                foreach (var entity in segment)
+                    yield return entity;
+
+                token = segment.ContinuationToken;
+
+            } while (token != null);
         }
 
         public virtual async Task<T> GetAsync(string partitionKey, string rowKey)
@@ -67,7 +137,9 @@ namespace IPAlloc.Model
             
                 foreach (var entity in segment)
                     yield return entity;
-                
+
+                token = segment.ContinuationToken;
+
             } while (token != null);
         }
 
@@ -82,7 +154,9 @@ namespace IPAlloc.Model
             
                 foreach (var entity in segment)
                     yield return entity;
-                
+
+                token = segment.ContinuationToken;
+
             } while (token != null);
         }
 

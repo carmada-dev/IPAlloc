@@ -9,7 +9,5 @@ namespace IPAlloc.Model
 {
     public sealed class AllocationRepository : BaseRepository<AllocationEntity>
     {
-        public IAsyncEnumerable<AllocationEntity> GetPartitionAsync(IPNetwork network)
-            => GetPartitionAsync(AllocationEntity.SerializeIPNetwork(network) ?? throw new ArgumentNullException(nameof(network)));
     }
 }

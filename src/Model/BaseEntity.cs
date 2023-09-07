@@ -11,7 +11,7 @@ namespace IPAlloc.Model
 {
     public abstract class BaseEntity : ITableEntity
     {
-        protected ITableEntity TableEntity => this;
+        public ITableEntity TableEntity => this;
 
         #region ITableEntity implementation
 
@@ -30,9 +30,7 @@ namespace IPAlloc.Model
 
         IDictionary<string, EntityProperty> ITableEntity.WriteEntity(OperationContext operationContext)
         {
-            var properties = Microsoft.WindowsAzure.Storage.Table.TableEntity.WriteUserObject(this, operationContext);
-
-            return properties;
+            return Microsoft.WindowsAzure.Storage.Table.TableEntity.WriteUserObject(this, operationContext);
         }
 
         #endregion ITableEntity implementation

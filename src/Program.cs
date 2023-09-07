@@ -1,50 +1,78 @@
-using System.Text.Json.Serialization;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 using IPAlloc.Model;
+using IPAlloc.Serialization;
+using IPAlloc.Threading;
 
+using Microsoft.ApplicationInsights.Extensibility;
+using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-
-using Newtonsoft.Json;
+using Microsoft.Extensions.Logging;
 
 using Serilog;
-using IPAlloc.Serialization;
 
 internal class Program
 {
     private static void Main(string[] args)
     {
-        
-        var host = new HostBuilder()
-            .ConfigureFunctionsWorkerDefaults()
-            .ConfigureServices(services =>
-            {
-                var logger = new LoggerConfiguration()
-                    .WriteTo.Console()
-                    .CreateLogger();
+        Log.Logger = new LoggerConfiguration()
+            .WriteTo.Console()
+            .CreateBootstrapLogger();
 
-                services
-                    .AddLogging(logging => logging.AddSerilog(logger, true));
-
-                services.Configure<JsonSerializerOptions>(options =>
+        try
+        {
+            var host = new HostBuilder()
+                .UseSerilog((context, services, configuration) =>
                 {
-                    options.AllowTrailingCommas = true;
-                    options.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
-                    options.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
-                    options.PropertyNameCaseInsensitive = true;
+                    configuration
+                        .MinimumLevel.Information()
+                        .Enrich.FromLogContext()
+                        .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
+                        .WriteTo.ApplicationInsights(TelemetryConfiguration.Active, TelemetryConverter.Traces);
 
-                    options.Converters.Add(new JsonStringEnumConverter());
-                    options.Converters.Add(new IPAddressConverter());
-                    options.Converters.Add(new IPEndPointConverter());
-                    options.Converters.Add(new IPNetworkConverter());
-                });
+                }, preserveStaticLogger: false)
+                .ConfigureFunctionsWorkerDefaults()
+                .ConfigureServices(services =>
+                {
+                    services.Configure<JsonSerializerOptions>(options =>
+                    {
+                        options.AllowTrailingCommas = true;
+                        options.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+                        options.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+                        options.PropertyNameCaseInsensitive = true;
 
-                services
-                    .AddSingleton<AllocationRepository>();
-            })
-            .Build();
+                        options.Converters.Add(new JsonStringEnumConverter());
+                        options.Converters.Add(new IPAddressConverter());
+                        options.Converters.Add(new IPEndPointConverter());
+                        options.Converters.Add(new IPNetworkConverter());
+                    });
 
-        host.Run();
+                    services.AddLogging(builder =>
+                    {
+                        Log.Information("Cleaning up logging providers.");
+
+                        builder
+                            .ClearProviders()
+                            .AddSerilog();
+                    });
+
+                    services
+                        .AddSingleton<AllocationRepository>()
+                        .AddSingleton<IDistributedLockManager, BlobStorageDistributedLockManager>();
+                })
+                .Build();
+
+            host.Run();
+        }
+        catch (Exception exc)
+        {
+            Log.Fatal(exc, "Failed to start the application.");
+        }
+        finally
+        {
+            Log.CloseAndFlush();
+        }
     }
 }

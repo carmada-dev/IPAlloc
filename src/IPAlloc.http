@@ -1,0 +1,18 @@
+﻿@IPAlloc_HostAddress = http://localhost:30245
+@IPAlloc_AllocationKey = 00000000-0000-0000-0000-000000000000
+
+GET {{IPAlloc_HostAddress}}/health
+
+###
+
+POST {{IPAlloc_HostAddress}}/allocation/{{IPAlloc_AllocationKey}}?env=sbx&cidr=24&cidr=25&cidr=26&cidr=26
+
+###
+
+GET {{IPAlloc_HostAddress}}/allocation/{{IPAlloc_AllocationKey}}
+
+###
+
+DELETE {{IPAlloc_HostAddress}}/allocation/{{IPAlloc_AllocationKey}}
+
+###

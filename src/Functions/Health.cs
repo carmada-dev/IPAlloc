@@ -7,8 +7,15 @@ namespace IPAlloc.Functions
 {
     public class Health
     {
+        private readonly ILogger logger;
+
+        public Health(ILogger<Health> logger)
+        {
+            this.logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        }
+
         [Function(nameof(Health))]
-        public HttpResponseData Run([HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData request)
+        public HttpResponseData Run([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "health")] HttpRequestData request)
             => request.CreateResponse(HttpStatusCode.OK);
     }
 }

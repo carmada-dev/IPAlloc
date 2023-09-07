@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <AzureFunctionsVersion>v4</AzureFunctionsVersion>
@@ -10,13 +10,17 @@
     <DockerfileContext>.</DockerfileContext>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.17.0" />
     <PackageReference Include="IPNetwork2" Version="2.6.608" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker" Version="1.19.0" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Http" Version="3.1.0" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Sdk" Version="1.14.1" />
+    <PackageReference Include="Microsoft.Azure.WebJobs" Version="3.0.37" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.19.5" />
     <PackageReference Include="Serilog" Version="3.0.1" />
+    <PackageReference Include="Serilog.Extensions.Hosting" Version="7.0.0" />
     <PackageReference Include="Serilog.Extensions.Logging" Version="7.0.0" />
+    <PackageReference Include="Serilog.Sinks.ApplicationInsights" Version="4.0.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="4.1.0" />
     <PackageReference Include="System.Linq.Async" Version="6.0.1">
       <TreatAsUsed>true</TreatAsUsed>
@@ -36,4 +40,10 @@
   <ItemGroup>
     <Using Include="System.Threading.ExecutionContext" Alias="ExecutionContext" />
   </ItemGroup>
+
+  <Target Name="ResetStorageEmulator" BeforeTargets="Build" Condition="'$(OS)' == 'Windows'">
+    <Message Text="Resetting Storage Emulator ..." Importance="high" />
+    <Exec WorkingDirectory="%programfiles(x86)%\Microsoft SDKs\Azure\Storage Emulator" Command="AzureStorageEmulator.exe clear all" ContinueOnError="true" />
+  </Target>
+
 </Project>
