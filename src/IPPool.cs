@@ -37,7 +37,7 @@ namespace IPAlloc
             if (string.IsNullOrEmpty(environmentType))
                 throw new ArgumentException($"'{nameof(environmentType)}' cannot be null or empty.", nameof(environmentType));
 
-            return new IPPool(environmentType, Environment.GetEnvironmentVariable($"{nameof(IPPool)}-{environmentType.Trim().ToUpperInvariant()}") ?? string.Empty);
+            return new IPPool(environmentType, Environment.GetEnvironmentVariable($"{nameof(IPPool).ToUpperInvariant()}_{environmentType.Trim().ToUpperInvariant()}") ?? string.Empty);
         }
 
         private IPPool(string environmentType, string environmentIPPools)
