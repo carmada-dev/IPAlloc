@@ -1,12 +1,15 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
+using IPAlloc.Middleware;
 using IPAlloc.Model;
 using IPAlloc.Serialization;
+using IPAlloc.Services;
 using IPAlloc.Threading;
 
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.Azure.WebJobs.Host;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -33,7 +36,12 @@ internal class Program
                         .WriteTo.ApplicationInsights(TelemetryConfiguration.Active, TelemetryConverter.Traces);
 
                 }, preserveStaticLogger: false)
-                .ConfigureFunctionsWorkerDefaults()
+                .ConfigureFunctionsWorkerDefaults(builder =>
+                {
+                    builder.UseMiddleware<AuthenticationMiddleware>();
+                    builder.UseMiddleware<AuthorizationMiddleware>();
+
+                })
                 .ConfigureServices(services =>
                 {
                     services.Configure<JsonSerializerOptions>(options =>
@@ -58,9 +66,13 @@ internal class Program
                             .AddSerilog();
                     });
 
+                    services.AddMemoryCache();
+
                     services
                         .AddSingleton<AllocationRepository>()
-                        .AddSingleton<IDistributedLockManager, BlobStorageDistributedLockManager>();
+                        .AddSingleton<IDistributedLockManager, BlobStorageDistributedLockManager>()
+                        .AddSingleton<TokenService>()
+                        .AddSingleton<RunnerService>();
                 })
                 .Build();
 

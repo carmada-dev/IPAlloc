@@ -1,13 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace IPAlloc.Model;
 
-namespace IPAlloc.Model
+public sealed class AllocationRepository : BaseRepository<AllocationEntity>
 {
-    public sealed class AllocationRepository : BaseRepository<AllocationEntity>
-    {
-    }
 }
